@@ -7,6 +7,9 @@ use App\Database;
 use App\Auth;
 use App\Response;
 use MongoDB\BSON\ObjectId;
+use App\CORS;
+
+CORS::handle();
 
 $posts = Database::getCollection('posts');
 $users = Database::getCollection('users');
@@ -24,7 +27,7 @@ try {
         foreach ($postsCursor as $post) {
             // Get author info
             $author = $users->findOne(['_id' => new ObjectId($post['author_id'])]);
-            
+
             $postData = [
                 'id' => (string)$post['_id'],
                 'title' => $post['title'],
@@ -39,7 +42,6 @@ try {
         }
 
         Response::success($allPosts);
-
     } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Create new post
         if (!$tokenData) {
@@ -47,7 +49,7 @@ try {
         }
 
         $data = json_decode(file_get_contents('php://input'), true);
-        
+
         if (!$data || !isset($data['title']) || !isset($data['body'])) {
             Response::error('Title and body are required', 400);
         }
@@ -67,7 +69,7 @@ try {
         ]);
 
         $postId = (string)$result->getInsertedId();
-        
+
         // Get author info
         $author = $users->findOne(['_id' => new ObjectId($userId)]);
 
@@ -82,12 +84,9 @@ try {
         ];
 
         Response::success($postData, '', 201);
-
     } else {
         Response::error('Method not allowed', 405);
     }
-
 } catch (Exception $e) {
     Response::error('Server error: ' . $e->getMessage(), 500);
 }
-

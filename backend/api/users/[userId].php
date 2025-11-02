@@ -7,6 +7,9 @@ use App\Database;
 use App\Auth;
 use App\Response;
 use MongoDB\BSON\ObjectId;
+use App\CORS;
+
+CORS::handle();
 
 $users = Database::getCollection('users');
 
@@ -24,7 +27,7 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // Get user by ID
         $user = $users->findOne(['_id' => new ObjectId($userId)]);
-        
+
         if (!$user) {
             Response::error('User not found', 404);
         }
@@ -42,7 +45,6 @@ try {
         ];
 
         Response::success($userData);
-
     } elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         // Update user profile
         if (!$tokenData) {
@@ -55,7 +57,7 @@ try {
         }
 
         $data = json_decode(file_get_contents('php://input'), true);
-        
+
         $updateData = [];
         if (isset($data['name'])) {
             $updateData['name'] = $data['name'];
@@ -72,7 +74,7 @@ try {
         if (isset($data['website'])) {
             $updateData['website'] = $data['website'];
         }
-        
+
         if (empty($updateData)) {
             Response::error('No fields to update', 400);
         }
@@ -84,7 +86,7 @@ try {
 
         // Get updated user
         $updatedUser = $users->findOne(['_id' => new ObjectId($userId)]);
-        
+
         $userData = [
             'id' => (string)$updatedUser['_id'],
             'email' => $updatedUser['email'],
@@ -98,12 +100,9 @@ try {
         ];
 
         Response::success($userData);
-
     } else {
         Response::error('Method not allowed', 405);
     }
-
 } catch (Exception $e) {
     Response::error('Server error: ' . $e->getMessage(), 500);
 }
-

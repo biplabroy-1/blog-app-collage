@@ -7,6 +7,9 @@ use App\Database;
 use App\Auth;
 use App\Response;
 use MongoDB\BSON\ObjectId;
+use App\CORS;
+
+CORS::handle();
 
 $posts = Database::getCollection('posts');
 $users = Database::getCollection('users');

@@ -7,6 +7,9 @@ use App\Database;
 use App\Auth;
 use App\Response;
 use MongoDB\BSON\ObjectId;
+use App\CORS;
+
+CORS::handle();
 
 $posts = Database::getCollection('posts');
 $users = Database::getCollection('users');
@@ -25,14 +28,14 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // Get post by ID
         $post = $posts->findOne(['_id' => new ObjectId($postId)]);
-        
+
         if (!$post) {
             Response::error('Post not found', 404);
         }
 
         // Get author info
         $author = $users->findOne(['_id' => new ObjectId($post['author_id'])]);
-        
+
         $postData = [
             'id' => (string)$post['_id'],
             'title' => $post['title'],
@@ -44,7 +47,6 @@ try {
         ];
 
         Response::success($postData);
-
     } elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         // Update post
         if (!$tokenData) {
@@ -52,7 +54,7 @@ try {
         }
 
         $post = $posts->findOne(['_id' => new ObjectId($postId)]);
-        
+
         if (!$post) {
             Response::error('Post not found', 404);
         }
@@ -63,7 +65,7 @@ try {
         }
 
         $data = json_decode(file_get_contents('php://input'), true);
-        
+
         $updateData = [];
         if (isset($data['title'])) {
             $updateData['title'] = $data['title'];
@@ -73,7 +75,7 @@ try {
             // Update excerpt
             $updateData['excerpt'] = mb_substr(strip_tags($data['body']), 0, 150) . '...';
         }
-        
+
         if (empty($updateData)) {
             Response::error('No fields to update', 400);
         }
@@ -88,7 +90,7 @@ try {
         // Get updated post
         $updatedPost = $posts->findOne(['_id' => new ObjectId($postId)]);
         $author = $users->findOne(['_id' => new ObjectId($updatedPost['author_id'])]);
-        
+
         $postData = [
             'id' => (string)$updatedPost['_id'],
             'title' => $updatedPost['title'],
@@ -100,7 +102,6 @@ try {
         ];
 
         Response::success($postData);
-
     } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         // Delete post
         if (!$tokenData) {
@@ -108,7 +109,7 @@ try {
         }
 
         $post = $posts->findOne(['_id' => new ObjectId($postId)]);
-        
+
         if (!$post) {
             Response::error('Post not found', 404);
         }
@@ -119,14 +120,11 @@ try {
         }
 
         $posts->deleteOne(['_id' => new ObjectId($postId)]);
-        
-        Response::success([], 'Post deleted successfully', 200);
 
+        Response::success([], 'Post deleted successfully', 200);
     } else {
         Response::error('Method not allowed', 405);
     }
-
 } catch (Exception $e) {
     Response::error('Server error: ' . $e->getMessage(), 500);
 }
-
