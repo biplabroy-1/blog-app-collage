@@ -1,0 +1,39 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: blog_backend
+    ports:
+      - "8000:80"
+    depends_on:
+      - mongo
+    environment:
+      # these are read by backend/config.php (via getenv)
+      DB_HOST: mongo
+      DB_PORT: 27017
+      DB_NAME: blog_app
+      JWT_SECRET: "change-this-to-a-secure-value"
+      ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173,http://localhost:8080,*"
+    volumes:
+      - ./backend:/var/www/html
+
+  mongo:
+    image: mongo:6.0
+    container_name: blog_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+  frontend:
+    build:
+      context: ./frontend
+    container_name: blog_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    environment:
+      API_BASE_URL: "http://localhost:8000/api"
+volumes:
+  mongo_data:
+    driver: local

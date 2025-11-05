@@ -1,0 +1,12 @@
+.git
+node_modules
+vendor
+frontend/node_modules
+.env
+.env.local
+.vscode
+/.idea
+/.gitignore
+composer.lock
+README.md
+dist

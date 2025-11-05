@@ -1,7 +1,7 @@
 import type { Post, CreatePostData, UpdatePostData, AuthResponse, User, UpdateProfileData } from '@/types/blog';
 
 // Configure your PHP backend URL here
-const API_BASE_URL = 'http://localhost:8000/api'; // Update this to your PHP backend URL
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000/api'; // Update this to your PHP backend URL
 
 // Helper function to get auth token
 const getAuthToken = (): string | null => {
@@ -20,7 +20,7 @@ const getAuthHeaders = (): HeadersInit => {
 // Auth API
 export const authApi = {
   async login(email: string, password: string): Promise<AuthResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await fetch(`${API_BASE_URL}/auth/login/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -39,7 +39,7 @@ export const authApi = {
   },
 
   async signup(email: string, password: string, name: string): Promise<AuthResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+    const response = await fetch(`${API_BASE_URL}/auth/signup/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, name }),
@@ -75,7 +75,7 @@ export const authApi = {
 // Posts API
 export const postsApi = {
   async getAll(): Promise<Post[]> {
-    const response = await fetch(`${API_BASE_URL}/posts`, {
+    const response = await fetch(`${API_BASE_URL}/posts/`, {
     });
     const result = await response.json();
 
@@ -87,7 +87,7 @@ export const postsApi = {
   },
 
   async getById(id: string): Promise<Post> {
-    const response = await fetch(`${API_BASE_URL}/posts/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/posts/${id}/`, {
     });
     const result = await response.json();
 
@@ -108,7 +108,7 @@ export const postsApi = {
       author_avatar_url: currentUser?.avatar_url,
     };
 
-    const response = await fetch(`${API_BASE_URL}/posts`, {
+    const response = await fetch(`${API_BASE_URL}/posts/`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(payload),
@@ -124,7 +124,7 @@ export const postsApi = {
   },
 
   async update(id: string, data: UpdatePostData): Promise<Post> {
-    const response = await fetch(`${API_BASE_URL}/posts/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/posts/${id}/`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
@@ -140,7 +140,7 @@ export const postsApi = {
   },
 
   async delete(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/posts/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/posts/${id}/`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
@@ -156,7 +156,7 @@ export const postsApi = {
 // Profiles API
 export const profilesApi = {
   async getById(userId: string): Promise<User> {
-    const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/users/${userId}/`, {
       headers: getAuthHeaders(),
     });
 
@@ -170,7 +170,7 @@ export const profilesApi = {
   },
 
   async getPostsByUser(userId: string): Promise<Post[]> {
-    const response = await fetch(`${API_BASE_URL}/users/${userId}/posts`, {
+    const response = await fetch(`${API_BASE_URL}/users/${userId}/posts/`, {
       headers: getAuthHeaders(),
     });
 
@@ -184,7 +184,7 @@ export const profilesApi = {
   },
 
   async update(userId: string, data: UpdateProfileData): Promise<User> {
-    const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/users/${userId}/`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
