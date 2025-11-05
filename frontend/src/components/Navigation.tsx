@@ -3,30 +3,28 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogOut, PenSquare } from 'lucide-react';
 import { authApi } from '@/services/api';
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 
 export const Navigation = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(authApi.getCurrentUser());
-  const [isAuthenticated, setIsAuthenticated] = useState(authApi.isAuthenticated());
+  const getSnapshot = () => {
+    const user = authApi.getCurrentUser();
+    return `${authApi.isAuthenticated() ? '1' : '0'}|${user?.id ?? ''}`;
+  };
 
-  useEffect(() => {
-    // Check auth state on mount and when storage changes
-    const checkAuth = () => {
-      setUser(authApi.getCurrentUser());
-      setIsAuthenticated(authApi.isAuthenticated());
-    };
+  const subscribe = (onStoreChange: () => void) => {
+    const handler = () => onStoreChange();
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  };
 
-    checkAuth();
-    window.addEventListener('storage', checkAuth);
-
-    return () => window.removeEventListener('storage', checkAuth);
-  }, []);
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot);
+  const isAuthenticated = snapshot.startsWith('1');
+  const user = authApi.getCurrentUser();
 
   const handleLogout = () => {
     authApi.logout();
-    setUser(null);
-    setIsAuthenticated(false);
+    window.dispatchEvent(new Event('storage'));
     navigate('/');
   };
 

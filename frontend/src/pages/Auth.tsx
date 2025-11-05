@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,12 +15,10 @@ const Auth = () => {
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ email: '', password: '', name: '' });
 
-  useEffect(() => {
-    // Redirect if already authenticated
-    if (authApi.isAuthenticated()) {
-      navigate('/');
-    }
-  }, [navigate]);
+  // Redirect immediately if already authenticated
+  if (authApi.isAuthenticated()) {
+    return <Navigate to="/" />;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,8 +29,8 @@ const Auth = () => {
       toast.success('Logged in successfully!');
       window.dispatchEvent(new Event('storage')); // Trigger nav update
       navigate('/');
-    } catch (error: any) {
-      toast.error(error.message || 'Login failed');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -47,8 +45,8 @@ const Auth = () => {
       toast.success('Account created successfully!');
       window.dispatchEvent(new Event('storage')); // Trigger nav update
       navigate('/');
-    } catch (error: any) {
-      toast.error(error.message || 'Signup failed');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Signup failed');
     } finally {
       setLoading(false);
     }

@@ -42,6 +42,7 @@ try {
                 'title' => $post['title'],
                 'body' => $post['body'],
                 'author_id' => $post['author_id'],
+                'author_avatar_url' => $author ? $author['avatar_url'] : null,
                 'author_name' => $author ? $author['name'] : 'Unknown',
                 'created_at' => $post['created_at']->toDateTime()->format('c'),
                 'excerpt' => isset($post['excerpt']) ? $post['excerpt'] : null

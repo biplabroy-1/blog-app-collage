@@ -1,31 +1,17 @@
-import { useEffect, useState } from 'react';
+import { } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { PostCard } from '@/components/PostCard';
 import { postsApi } from '@/services/api';
 import type { Post } from '@/types/blog';
 import { BookOpen } from 'lucide-react';
-import { toast } from 'sonner';
 
 const Home = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: posts = [] as Post[], isLoading, isError, error } = useQuery<Post[]>({
+    queryKey: ['posts'],
+    queryFn: () => postsApi.getAll(),
+  });
 
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const data = await postsApi.getAll();
-        setPosts(data);
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to load posts');
-        setPosts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchPosts();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-16">
@@ -34,6 +20,17 @@ const Home = () => {
               <div key={i} className="h-64 bg-muted animate-pulse rounded-lg" />
             ))}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold">Failed to load posts</h2>
+          <p className="text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
         </div>
       </div>
     );
@@ -60,7 +57,7 @@ const Home = () => {
       {/* Posts Grid */}
       <section className="container mx-auto px-4 py-16">
         <h2 className="text-3xl font-bold mb-8">Latest Posts</h2>
-        
+
         {posts.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-xl text-muted-foreground">No posts yet. Be the first to write!</p>

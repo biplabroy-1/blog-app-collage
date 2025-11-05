@@ -1,61 +1,69 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useRef } from 'react';
+import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import MarkdownEditor from '@/components/ui/MarkdownEditor';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { authApi, postsApi } from '@/services/api';
 import type { Post } from '@/types/blog';
 import { toast } from 'sonner';
 import { Loader2, ArrowLeft } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const EditPost = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
   const [formData, setFormData] = useState({ title: '', body: '' });
-  const [post, setPost] = useState<Post | null>(null);
   const currentUser = authApi.getCurrentUser();
 
-  useEffect(() => {
-    if (!authApi.isAuthenticated()) {
-      toast.error('Please login to edit posts');
-      navigate('/auth');
-      return;
+  const queryClient = useQueryClient();
+
+  const { data: post, isLoading: initialLoading, isError, error } = useQuery<Post>({
+    queryKey: ['post', id],
+    queryFn: () => (id ? postsApi.getById(id) : Promise.reject(new Error('No id'))),
+    enabled: !!id,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: { title: string; body: string }) => (id ? postsApi.update(id, data) : Promise.reject(new Error('No id'))),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
+  });
+
+  const permissionToasted = useRef(false);
+
+  if (!authApi.isAuthenticated()) {
+    toast.error('Please login to edit posts');
+    return <Navigate to="/auth" />;
+  }
+
+  if (!initialLoading && isError) {
+    toast.error(error instanceof Error ? error.message : String(error));
+    navigate('/');
+    return null;
+  }
+
+  if (!initialLoading && post && currentUser && currentUser.id !== post.author_id && !currentUser.isAdmin) {
+    if (!permissionToasted.current) {
+      toast.error('You do not have permission to edit this post');
+      permissionToasted.current = true;
     }
-
-    const fetchPost = async () => {
-      if (!id) return;
-      
-      try {
-        const foundPost = await postsApi.getById(id);
-        
-        // Check permissions
-        if (currentUser.id !== foundPost.author_id && !currentUser.isAdmin) {
-          toast.error('You do not have permission to edit this post');
-          navigate('/');
-          return;
-        }
-
-        setPost(foundPost);
-        setFormData({ title: foundPost.title, body: foundPost.body });
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to load post');
-        navigate('/');
-      } finally {
-        setInitialLoading(false);
-      }
-    };
-
-    fetchPost();
-  }, [id, navigate, currentUser]);
+    return <Navigate to="/" />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title.trim() || !formData.body.trim()) {
+    // Allow submitting unchanged fields by falling back to loaded post values
+    const title = (formData.title && formData.title.trim()) || post?.title || '';
+    const body = (formData.body && formData.body.trim()) || post?.body || '';
+
+    if (!title || !body) {
       toast.error('Please fill in all fields');
       return;
     }
@@ -64,24 +72,18 @@ const EditPost = () => {
 
     if (!id) return;
 
+    const payload = { title, body };
+
     try {
-      await postsApi.update(id, formData);
+      await updateMutation.mutateAsync(payload);
       toast.success('Post updated successfully!');
       navigate(`/post/${id}`);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update post');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
   };
-
-  if (initialLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -105,7 +107,7 @@ const EditPost = () => {
                   id="title"
                   placeholder="Enter an engaging title..."
                   required
-                  value={formData.title}
+                  defaultValue={post?.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className="text-lg"
                 />
@@ -113,14 +115,11 @@ const EditPost = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="body">Content</Label>
-                <Textarea
-                  id="body"
+                <MarkdownEditor
+                  value={formData.body || post?.body || ''}
+                  onChange={(v) => setFormData({ ...formData, body: v })}
                   placeholder="Write your post content here..."
-                  required
-                  value={formData.body}
-                  onChange={(e) => setFormData({ ...formData, body: e.target.value })}
-                  rows={20}
-                  className="resize-y font-mono"
+                  minHeight={300}
                 />
               </div>
 

@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar } from 'lucide-react';
 import type { Post } from '@/types/blog';
+import { ReactMarkdown } from 'react-markdown/lib/react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface PostCardProps {
   post: Post;
@@ -28,7 +30,7 @@ export const PostCard = ({ post }: PostCardProps) => {
           <h2 className="text-2xl font-bold mb-3 group-hover:text-primary transition-colors line-clamp-2">
             {post.title}
           </h2>
-          
+
           <div className="flex items-center gap-4 text-sm">
             <Link
               to={`/profile/${post.author_id}`}
@@ -37,8 +39,8 @@ export const PostCard = ({ post }: PostCardProps) => {
             >
               <Avatar className="h-6 w-6">
                 <AvatarImage
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author_name}`}
-                  alt={post.author_name}
+                  src={post?.author_avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post?.author_name}`}
+                  alt={post?.author_name}
                 />
                 <AvatarFallback className="text-xs bg-primary text-white">
                   {authorInitials}
@@ -46,7 +48,7 @@ export const PostCard = ({ post }: PostCardProps) => {
               </Avatar>
               <span className="font-medium">{post.author_name}</span>
             </Link>
-            
+
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Calendar className="h-4 w-4" />
               <span>{formattedDate}</span>
@@ -56,11 +58,11 @@ export const PostCard = ({ post }: PostCardProps) => {
 
         <CardContent>
           <p className="text-muted-foreground line-clamp-3 leading-relaxed">
-            {post.excerpt || post.body.substring(0, 150) + '...'}
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.body.substring(0, 150) + '...'}</ReactMarkdown>
           </p>
-          
+
           <div className="mt-4 inline-flex items-center gap-2 text-primary font-medium group-hover:gap-3 transition-all">
-            Read more 
+            Read more
             <span className="transition-transform group-hover:translate-x-1">→</span>
           </div>
         </CardContent>

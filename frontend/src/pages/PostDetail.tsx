@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useRef } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -6,6 +7,9 @@ import { Calendar, ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import { authApi, postsApi } from '@/services/api';
 import type { Post } from '@/types/blog';
 import { toast } from 'sonner';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,43 +25,55 @@ import {
 const PostDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [post, setPost] = useState<Post | null>(null);
-  const [loading, setLoading] = useState(true);
   const currentUser = authApi.getCurrentUser();
 
-  useEffect(() => {
-    const fetchPost = async () => {
-      if (!id) return;
-      
-      try {
-        const data = await postsApi.getById(id);
-        setPost(data);
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to load post');
-        setPost(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchPost();
-  }, [id]);
+  const queryClient = useQueryClient();
+
+  const { data: post, isLoading, isError, error } = useQuery<Post>({
+    queryKey: ['post', id],
+    queryFn: () => (id ? postsApi.getById(id) : Promise.reject(new Error('No id'))),
+    enabled: !!id,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => (id ? postsApi.delete(id) : Promise.reject(new Error('No id'))),
+    onSuccess: () => {
+      toast.success('Post deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      navigate('/');
+    },
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
+  });
+
+  const permissionToasted = useRef(false);
+
+  if (!isLoading && isError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold mb-4">Post Not Found</h1>
+          <p className="text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isLoading && post && currentUser && currentUser.id !== post.author_id && !currentUser.isAdmin) {
+    if (!permissionToasted.current) {
+      toast.error('You do not have permission to view this post');
+      permissionToasted.current = true;
+    }
+    return <Navigate to="/" />;
+  }
 
   const canEdit = currentUser && (currentUser.id === post?.author_id || currentUser.isAdmin);
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!id) return;
-    
-    try {
-      await postsApi.delete(id);
-      toast.success('Post deleted successfully');
-      navigate('/');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to delete post');
-    }
+    deleteMutation.mutate();
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -118,8 +134,8 @@ const PostDetail = () => {
               >
                 <Avatar className="h-10 w-10">
                   <AvatarImage
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author_name}`}
-                    alt={post.author_name}
+                    src={post?.author_avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post?.author_name}`}
+                    alt={post?.author_name}
                   />
                   <AvatarFallback className="bg-primary text-white">
                     {authorInitials}
@@ -171,8 +187,8 @@ const PostDetail = () => {
           </header>
 
           <div className="prose prose-lg max-w-none">
-            <div className="whitespace-pre-wrap leading-relaxed text-foreground">
-              {post.body}
+            <div className="leading-relaxed text-foreground">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.body}</ReactMarkdown>
             </div>
           </div>
         </div>

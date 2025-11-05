@@ -15,6 +15,7 @@ export interface Post {
   title: string;
   body: string;
   author_id: string;
+  author_avatar_url?: string;
   author_name: string;
   created_at: string;
   excerpt?: string;
@@ -28,6 +29,9 @@ export interface AuthResponse {
 export interface CreatePostData {
   title: string;
   body: string;
+  // Optional: author info (frontend will attach current user's name and avatar when creating)
+  author_name?: string;
+  author_avatar_url?: string;
 }
 
 export interface UpdatePostData {

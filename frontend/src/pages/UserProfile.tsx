@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,39 +6,27 @@ import { MapPin, Globe, Calendar, Mail, Settings, ArrowLeft } from 'lucide-react
 import { authApi, profilesApi } from '@/services/api';
 import type { User, Post } from '@/types/blog';
 import { PostCard } from '@/components/PostCard';
-import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
 
 const UserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
   const currentUser = authApi.getCurrentUser();
   const isOwnProfile = currentUser && currentUser.id === userId;
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!userId) return;
-      
-      try {
-        const [userData, postsData] = await Promise.all([
-          profilesApi.getById(userId),
-          profilesApi.getPostsByUser(userId)
-        ]);
-        setUser(userData);
-        setPosts(postsData);
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to load profile');
-        setUser(null);
-        setPosts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchProfile();
-  }, [userId]);
+  const { data: user, isLoading: userLoading } = useQuery<User>({
+    queryKey: ['user', userId],
+    queryFn: () => (userId ? profilesApi.getById(userId) : Promise.reject(new Error('No id'))),
+    enabled: !!userId,
+  });
+
+  const { data: posts = [] as Post[], isLoading: postsLoading } = useQuery<Post[]>({
+    queryKey: ['userPosts', userId],
+    queryFn: () => (userId ? profilesApi.getPostsByUser(userId) : Promise.reject(new Error('No id'))),
+    enabled: !!userId,
+  });
+
+  const loading = userLoading || postsLoading;
 
   if (loading) {
     return (
@@ -69,9 +56,9 @@ const UserProfile = () => {
 
   const joinedDate = user.joined_at
     ? new Date(user.joined_at).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-      })
+      year: 'numeric',
+      month: 'long',
+    })
     : 'Unknown';
 
   const initials = user.name
@@ -89,81 +76,94 @@ const UserProfile = () => {
         </Button>
 
         {/* Profile Header */}
-        <Card className="mb-8 overflow-hidden shadow-lg">
-          <div className="h-32 bg-gradient-to-r from-primary via-primary to-accent" />
-          
-          <CardContent className="relative pt-0">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 -mt-16 md:-mt-20">
-              <div className="flex flex-col md:flex-row gap-6 items-start md:items-end">
-                <Avatar className="h-32 w-32 border-4 border-background shadow-xl">
-                  <AvatarImage src={user.avatar_url} alt={user.name} />
-                  <AvatarFallback className="text-3xl font-bold bg-gradient-to-br from-primary to-accent text-white">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
+        <Card className="mb-8 overflow-hidden shadow-sm border">
+          <div className="relative">
+            {/* Background Gradient */}
+            <div className="h-36 bg-gradient-to-r from-primary/90 via-accent/80 to-primary rounded-t-lg" />
 
-                <div className="pb-2">
-                  <h1 className="text-3xl font-bold mb-2">{user.name}</h1>
-                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    {user.location && (
+            {/* Avatar & Info */}
+            <CardContent className="relative">
+              <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 -mt-16">
+                <div className="flex flex-col md:flex-row md:items-end gap-6">
+                  <Avatar className="h-32 w-32 border-4 bg-white border-background shadow-lg rounded-full">
+                    <AvatarImage
+                      src={
+                        user?.avatar_url ||
+                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name}`
+                      }
+                      alt={user?.name}
+                    />
+                    <AvatarFallback className="text-3xl font-bold bg-primary text-white">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div className="flex flex-col gap-2">
+                    <h1 className="text-3xl font-bold leading-tight">{user.name}</h1>
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                      {user.location && (
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="h-4 w-4" />
+                          <span>{user.location}</span>
+                        </div>
+                      )}
+                      {user.website && (
+                        <a
+                          href={user.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 hover:text-primary transition-colors"
+                        >
+                          <Globe className="h-4 w-4" />
+                          <span>{user.website.replace(/^https?:\/\//, '')}</span>
+                        </a>
+                      )}
                       <div className="flex items-center gap-1.5">
-                        <MapPin className="h-4 w-4" />
-                        <span>{user.location}</span>
+                        <Calendar className="h-4 w-4" />
+                        <span>Joined {joinedDate}</span>
                       </div>
-                    )}
-                    {user.website && (
-                      <a
-                        href={user.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 hover:text-primary transition-colors"
-                      >
-                        <Globe className="h-4 w-4" />
-                        <span>{user.website.replace(/^https?:\/\//, '')}</span>
-                      </a>
-                    )}
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-4 w-4" />
-                      <span>Joined {joinedDate}</span>
+                      {!isOwnProfile && user.email && (
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="h-4 w-4" />
+                          <span>{user.email}</span>
+                        </div>
+                      )}
                     </div>
-                    {!isOwnProfile && user.email && (
-                      <div className="flex items-center gap-1.5">
-                        <Mail className="h-4 w-4" />
-                        <span>{user.email}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
+
+                {isOwnProfile && (
+                  <Button asChild size="sm" className="md:mb-2">
+                    <Link to={`/profile/${userId}/edit`}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Edit Profile
+                    </Link>
+                  </Button>
+                )}
               </div>
 
-              {isOwnProfile && (
-                <Button asChild className="self-start md:self-auto">
-                  <Link to={`/profile/${userId}/edit`}>
-                    <Settings className="h-4 w-4 mr-2" />
-                    Edit Profile
-                  </Link>
-                </Button>
-              )}
-            </div>
-
-            {user.bio && (
-              <div className="mt-6 pt-6 border-t">
-                <p className="text-lg leading-relaxed">{user.bio}</p>
-              </div>
-            )}
-
-            <div className="mt-6 pt-6 border-t flex gap-8">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{posts.length}</div>
-                <div className="text-sm text-muted-foreground">Posts</div>
-              </div>
-              {user.isAdmin && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent rounded-full">
-                  <span className="font-semibold">Admin</span>
+              {/* Bio */}
+              {user.bio && (
+                <div className="mt-6 border-t pt-4">
+                  <p className="text-base text-muted-foreground leading-relaxed">{user.bio}</p>
                 </div>
               )}
-            </div>
-          </CardContent>
+
+              {/* Stats */}
+              <div className="mt-6 flex items-center gap-6 border-t pt-4">
+                <div className="text-center">
+                  <div className="text-3xl font-semibold text-primary">{posts.length}</div>
+                  <div className="text-sm text-muted-foreground">Posts</div>
+                </div>
+
+                {user.isAdmin && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/20 text-accent rounded-full text-sm font-medium">
+                    Admin
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </div>
         </Card>
 
         {/* User's Posts */}

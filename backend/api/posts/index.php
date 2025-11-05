@@ -34,6 +34,7 @@ try {
                 'body' => $post['body'],
                 'author_id' => $post['author_id'],
                 'author_name' => $author ? $author['name'] : 'Unknown',
+                'author_avatar_url' => $author ? ($author['avatar_url'] ?? null) : null,
                 'created_at' => $post['created_at']->toDateTime()->format('c'),
                 'excerpt' => isset($post['excerpt']) ? $post['excerpt'] : null
             ];
@@ -79,6 +80,7 @@ try {
             'body' => $data['body'],
             'author_id' => $userId,
             'author_name' => $author ? $author['name'] : 'Unknown',
+            'author_avatar_url' => $author ? ($author['avatar_url'] ?? null) : null,
             'created_at' => (new MongoDB\BSON\UTCDateTime())->toDateTime()->format('c'),
             'excerpt' => $excerpt
         ];

@@ -25,13 +25,13 @@ export const authApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    
+
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Login failed');
     }
-    
+
     const { token, user } = result.data;
     localStorage.setItem('auth_token', token);
     localStorage.setItem('user', JSON.stringify(user));
@@ -44,13 +44,13 @@ export const authApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, name }),
     });
-    
+
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Signup failed');
     }
-    
+
     const { token, user } = result.data;
     localStorage.setItem('auth_token', token);
     localStorage.setItem('user', JSON.stringify(user));
@@ -62,7 +62,7 @@ export const authApi = {
     localStorage.removeItem('user');
   },
 
-  getCurrentUser(): any | null {
+  getCurrentUser(): User | null {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
   },
@@ -78,11 +78,11 @@ export const postsApi = {
     const response = await fetch(`${API_BASE_URL}/posts`, {
     });
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Failed to fetch posts');
     }
-    
+
     return result.data;
   },
 
@@ -90,27 +90,36 @@ export const postsApi = {
     const response = await fetch(`${API_BASE_URL}/posts/${id}`, {
     });
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Failed to fetch post');
     }
-    
+
     return result.data;
   },
 
   async create(data: CreatePostData): Promise<Post> {
+    // Attach current user's name and avatar to the post payload so backend and other clients
+    // can show author information without extra joins on the client.
+    const currentUser = authApi.getCurrentUser();
+    const payload = {
+      ...data,
+      author_name: currentUser?.name,
+      author_avatar_url: currentUser?.avatar_url,
+    };
+
     const response = await fetch(`${API_BASE_URL}/posts`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
-    
+
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Failed to create post');
     }
-    
+
     return result.data;
   },
 
@@ -120,13 +129,13 @@ export const postsApi = {
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
-    
+
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Failed to update post');
     }
-    
+
     return result.data;
   },
 
@@ -135,9 +144,9 @@ export const postsApi = {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
-    
+
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Failed to delete post');
     }
@@ -150,13 +159,13 @@ export const profilesApi = {
     const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
       headers: getAuthHeaders(),
     });
-    
+
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Failed to fetch user profile');
     }
-    
+
     return result.data;
   },
 
@@ -164,13 +173,13 @@ export const profilesApi = {
     const response = await fetch(`${API_BASE_URL}/users/${userId}/posts`, {
       headers: getAuthHeaders(),
     });
-    
+
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Failed to fetch user posts');
     }
-    
+
     return result.data;
   },
 
@@ -180,13 +189,13 @@ export const profilesApi = {
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
-    
+
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Failed to update profile');
     }
-    
+
     const updatedUser = result.data;
     // Update local storage if updating current user
     const currentUser = authApi.getCurrentUser();

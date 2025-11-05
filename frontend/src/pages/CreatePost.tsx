@@ -1,25 +1,35 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import MarkdownEditor from '@/components/ui/MarkdownEditor';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { authApi, postsApi } from '@/services/api';
 import { toast } from 'sonner';
 import { Loader2, ArrowLeft } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const CreatePost = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ title: '', body: '' });
 
-  useEffect(() => {
-    if (!authApi.isAuthenticated()) {
-      toast.error('Please login to create a post');
-      navigate('/auth');
-    }
-  }, [navigate]);
+  const queryClient = useQueryClient();
+  const createMutation = useMutation({
+    mutationFn: (data: { title: string; body: string }) => postsApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      navigate('/');
+    },
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
+  });
+
+  if (!authApi.isAuthenticated()) {
+    toast.error('Please login to create a post');
+    return <Navigate to="/auth" />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,11 +42,10 @@ const CreatePost = () => {
     setLoading(true);
 
     try {
-      await postsApi.create(formData);
+      await createMutation.mutateAsync(formData);
       toast.success('Post created successfully!');
-      navigate('/');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create post');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -72,18 +81,12 @@ const CreatePost = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="body">Content</Label>
-                <Textarea
-                  id="body"
-                  placeholder="Write your post content here... You can use markdown formatting."
-                  required
+                <MarkdownEditor
                   value={formData.body}
-                  onChange={(e) => setFormData({ ...formData, body: e.target.value })}
-                  rows={20}
-                  className="resize-y font-mono"
+                  onChange={(v) => setFormData({ ...formData, body: v })}
+                  placeholder="Write your post content here... You can use markdown formatting."
+                  minHeight={300}
                 />
-                <p className="text-sm text-muted-foreground">
-                  Minimum 50 characters. Supports plain text and basic formatting.
-                </p>
               </div>
 
               <div className="flex gap-3">

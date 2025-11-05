@@ -8,7 +8,6 @@ use App\CORS;
 
 // Handle CORS
 CORS::handle();
-error_log("CORS applied: " . json_encode(headers_list()));
 
 // Get the request URI
 $requestUri = $_SERVER['REQUEST_URI'];
