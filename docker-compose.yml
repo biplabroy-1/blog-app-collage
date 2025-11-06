@@ -29,7 +29,7 @@ services:
       context: ./frontend
     container_name: blog_frontend
     ports:
-      - "80:80"
+      - "81:80"
     depends_on:
       - backend
     environment:
