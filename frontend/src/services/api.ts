@@ -1,7 +1,7 @@
 import type { Post, CreatePostData, UpdatePostData, AuthResponse, User, UpdateProfileData } from '@/types/blog';
 
 // Configure your PHP backend URL here
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000/api'; // Update this to your PHP backend URL
+const API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:8000/api'; // Update this to your PHP backend URL
 
 // Helper function to get auth token
 const getAuthToken = (): string | null => {
